@@ -119,6 +119,9 @@
       if (!canvas) return;
       canvas.width = Math.round(s.w * dpr);
       canvas.height = Math.round(s.h * dpr);
+      // 鎖死顯示尺寸：只改 attribute 不設 CSS 的話，canvas 會以背板尺寸顯示（手機上爆寬）
+      canvas.style.width = s.w + 'px';
+      canvas.style.height = s.h + 'px';
       canvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
