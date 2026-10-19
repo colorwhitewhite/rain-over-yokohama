@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>雨 Rain Over Yokohama — 翻書版</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #04121C; }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", sans-serif;
+    color: #cfe3ef; -webkit-user-select: none; user-select: none;
+    touch-action: pan-y;
+  }
+  #book-wrap {
+    position: relative; width: 100vw; height: 100dvh;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #book { box-shadow: 0 20px 80px rgba(0,0,0,.6); }
+  #book img { display: block; }
+  #hud {
+    position: fixed; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom));
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    pointer-events: none; z-index: 10;
+  }
+  #hud button {
+    pointer-events: auto; width: 52px; height: 52px; border-radius: 50%;
+    border: 1px solid rgba(207,227,239,.35); background: rgba(4,18,28,.65);
+    color: #cfe3ef; font-size: 22px; cursor: pointer; backdrop-filter: blur(6px);
+  }
+  #hud button:active { transform: scale(.94); }
+  #page-num { font-size: 13px; letter-spacing: .12em; opacity: .85; min-width: 74px; text-align: center; }
+  #loading {
+    position: fixed; inset: 0; display: flex; flex-direction: column; gap: 14px;
+    align-items: center; justify-content: center; background: #04121C; z-index: 20;
+    transition: opacity .5s;
+  }
+  #loading.done { opacity: 0; pointer-events: none; }
+  #loading .t { font-size: 15px; letter-spacing: .3em; }
+  #loading .bar { width: 180px; height: 3px; background: rgba(207,227,239,.15); border-radius: 2px; overflow: hidden; }
+  #loading .bar i { display: block; height: 100%; width: 0%; background: #7fb6d9; transition: width .3s; }
+  #hint {
+    position: fixed; top: max(12px, env(safe-area-inset-top)); left: 0; right: 0;
+    text-align: center; font-size: 12px; letter-spacing: .2em; opacity: 0;
+    transition: opacity 1s; pointer-events: none; z-index: 10;
+  }
+  #hint.show { opacity: .55; }
+</style>
+</head>
+<body>
+<div id="loading"><div class="t">雨 RAIN OVER YOKOHAMA</div><div class="bar"><i id="loadbar"></i></div></div>
+<div id="hint">左右滑動翻頁</div>
+<div id="book-wrap"><div id="book"></div></div>
+<div id="hud">
+  <button id="prev" aria-label="上一頁">‹</button>
+  <span id="page-num">– / 29</span>
+  <button id="next" aria-label="下一頁">›</button>
+</div>
+<script src="./js/page-flip.js"></script>
+<script>
+(function () {
+  var TOTAL = 29;
+  var images = [];
+  for (var i = 1; i <= TOTAL; i++) {
+    images.push('pages/pg-' + String(i).padStart(2, '0') + '.jpg');
+  }
+
+  // 預載進度
+  var loaded = 0;
+  var bar = document.getElementById('loadbar');
+  function preload(list, done) {
+    var n = list.length, ok = 0;
+    list.forEach(function (src) {
+      var im = new Image();
+      im.onload = im.onerror = function () {
+        ok++; loaded++;
+        bar.style.width = Math.round(loaded / n * 100) + '%';
+        if (ok === n) done();
+      };
+      im.src = src;
+    });
+  }
+
+  function fitSize() {
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var ratio = 1620 / 810; // 高 / 寬
+    var w = vw, h = w * ratio;
+    if (h > vh * 0.94) { h = vh * 0.94; w = h / ratio; }
+    return { w: Math.floor(w), h: Math.floor(h) };
+  }
+
+  function init() {
+    var s = fitSize();
+    var flip = new St.PageFlip(document.getElementById('book'), {
+      width: s.w,
+      height: s.h,
+      size: 'fixed',
+      minWidth: 200, maxWidth: 1200, minHeight: 400, maxHeight: 2400,
+      showCover: true,
+      mobileScrollSupport: true,
+      flippingTime: 700,
+      usePortrait: true,
+      drawShadow: true,
+      useMouseEvents: true,
+      showPageCorners: true,
+      disableFlipByClick: false
+    });
+    flip.loadFromImages(images);
+
+    var num = document.getElementById('page-num');
+    function updateNum(e) { num.textContent = (e.data + 1) + ' / ' + TOTAL; }
+    flip.on('flip', updateNum);
+    flip.on('init', function (e) { updateNum({ data: 0 }); });
+
+    document.getElementById('prev').addEventListener('click', function () { flip.flipPrev(); });
+    document.getElementById('next').addEventListener('click', function () { flip.flipNext(); });
+
+    var hint = document.getElementById('hint');
+    setTimeout(function () { hint.classList.add('show'); }, 600);
+    setTimeout(function () { hint.classList.remove('show'); }, 5000);
+
+    var done = false;
+    window.addEventListener('resize', function () {
+      if (done) return; done = true;
+      setTimeout(function () { location.reload(); done = false; }, 400);
+    });
+  }
+
+  // 只預載前 3 頁就開書，其餘翻頁時載入（29 張 2x 圖全預載會撐爆手機記憶體）
+  preload(images.slice(0, 3), function () {
+    document.getElementById('loading').classList.add('done');
+    init();
+  });
+})();
+</script>
+</body>
+</html>
